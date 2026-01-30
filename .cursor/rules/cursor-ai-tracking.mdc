@@ -1,0 +1,35 @@
+---
+description: Cursor AI Tracking Insights プロジェクト用ルール。Phase 1（CLI 基盤）の実装・保守に適用する。
+globs: ["**/*.ts", "**/*.json"]
+alwaysApply: false
+---
+
+# Cursor AI Tracking Insights プロジェクトルール
+
+## 言語・品質
+
+- TypeScript は **strict** を維持する。`tsconfig.json` の `strict: true` を変更しない。
+- ESLint / フォーマットはプロジェクトで統一する。ルートの設定に従う。
+
+## DB
+
+- `~/.cursor/ai-tracking/ai-code-tracking.db` は**読み取り専用**で参照する。
+- 書き込み・スキーマ変更は行わない。better-sqlite3 は `readonly: true` で開く。
+- デフォルトパスの `~` は `os.homedir()` と `path` で解決する。
+
+## 開発方針
+
+- **TDD** で進める。テストを先に書き、`pnpm test` が通る状態を保つ。
+- 各レイヤーで「テストを書く → 失敗確認 → 実装 → 成功 → リファクタ」を繰り返す。
+
+## 構成
+
+- ディレクトリ・ファイル構成は本計画に従う。
+  - `src/db/schema.ts`: 実スキーマ（ai_code_hashes 等）に基づく型・定数。
+  - `src/db/reader.ts`: `getSummary(repoPath, options?)` 等のシグネチャ案に合わせる。
+  - `src/cli/commands.ts`: `summary` サブコマンド。オプション: `--repo`, `--days`, `--limit`, `--db-path`, `--output`。
+- summary 出力: `totalCount` と `items`（id, repoPath, fileName, fileExtension, language, hash, model, source, createdAt）。エラーメッセージ文言は計画の一覧に従う。
+
+## 参照
+
+- 実装時は本計画（Phase 1 タスク一覧・summary 出力仕様・実行例・エラーメッセージ文言一覧）を参照する。
