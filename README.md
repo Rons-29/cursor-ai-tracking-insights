@@ -64,22 +64,19 @@ pnpm test
 
 詳細は `docs/project-setup.md` を参照してください。
 
-## Git 連携
+## Git 連携（このリポジトリ: cursor-ai-tracking-insights）
 
-このプロジェクトは `git init` 済みですが、**リモート（GitHub/GitLab 等）は未設定**です。初回コミットとリモート追加の手順は以下です。
+**このフォルダ（cursor-ai-tracking-insights）** のみが 1 つの Git リポジトリです。親の `project` フォルダとは別です。
 
-### 1. 初回コミット
+- `git init` 済み・初回コミット済み（main ブランチ）
+- **リモート（GitHub/GitLab 等）は未設定**です。追加する手順は以下です。
 
-```bash
-git add .
-git commit -m "chore: Phase 1 CLI (summary) 実装"
-```
+### 1. リモートの追加とプッシュ
 
-### 2. リモートの追加とプッシュ
-
-GitHub 等でリポジトリを新規作成したあと、以下で origin を追加してプッシュします。
+GitHub 等で **cursor-ai-tracking-insights** 用のリポジトリを新規作成したあと、このフォルダで実行します。
 
 ```bash
+cd /path/to/cursor-ai-tracking-insights   # このリポジトリのルート
 git remote add origin https://github.com/<あなたのユーザ名>/cursor-ai-tracking-insights.git
 git branch -M main
 git push -u origin main
@@ -87,7 +84,7 @@ git push -u origin main
 
 （SSH の場合は `git@github.com:<ユーザ名>/cursor-ai-tracking-insights.git` を使用してください。）
 
-### 3. 今後
+### 2. 今後
 
 - `.env` はコミットしない（`.gitignore` に含まれています）
 - `node_modules/` と `dist/` も `.gitignore` 済みです
