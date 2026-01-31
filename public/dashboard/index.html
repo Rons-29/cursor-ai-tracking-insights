@@ -22,10 +22,16 @@
     .chart-card h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--muted); }
     .chart-container { position: relative; height: 240px; }
     .table-wrap { overflow-x: auto; background: var(--card); border-radius: 8px; padding: 1rem; }
-    .table-wrap h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--muted); }
+    .table-wrap h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--muted); }
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--accent); }
     th { color: var(--muted); font-weight: 500; }
+    .th-label { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .th-tooltip-wrap { position: relative; display: inline-flex; }
+    .th-info { display: inline-flex; align-items: center; justify-content: center; width: 1.1em; height: 1.1em; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font-size: 0.7em; font-weight: bold; cursor: help; }
+    .th-info:hover { color: var(--text); border-color: var(--text); }
+    .th-tooltip { position: fixed; padding: 8px 10px; background: var(--bg); border: 1px solid var(--accent); border-radius: 6px; font-size: 0.75rem; font-weight: normal; color: var(--text); white-space: normal; max-width: 340px; line-height: 1.4; box-shadow: 0 4px 12px rgba(0,0,0,0.3); opacity: 0; visibility: hidden; transition: opacity 0.15s ease, visibility 0.15s; z-index: 1000; pointer-events: none; }
+    .th-tooltip.is-visible { opacity: 1; visibility: visible; }
     .total { margin: 0.5rem 0; font-size: 0.9rem; color: var(--muted); }
   </style>
 </head>
@@ -35,7 +41,7 @@
     <div class="form">
       <label>
         リポジトリパス（絶対パス）
-        <input type="text" id="repo" placeholder="/Users/me/my-project" />
+        <input type="text" id="repo" placeholder="/Users/me/my-project" value="/Users/shirokki22/project" />
       </label>
       <label>
         直近（日）
@@ -60,10 +66,18 @@
       <table>
         <thead>
           <tr>
-            <th>ファイル</th>
-            <th>拡張子</th>
-            <th>日時</th>
-            <th>source</th>
+            <th>
+              <span class="th-label">ファイル<span class="th-tooltip-wrap"><span class="th-info" aria-label="列の説明">?</span><span class="th-tooltip">Cursor で AI 生成が記録されたファイルの絶対パス。どのファイルで AI が使われたかを確認する。</span></span></span>
+            </th>
+            <th>
+              <span class="th-label">拡張子<span class="th-tooltip-wrap"><span class="th-info" aria-label="列の説明">?</span><span class="th-tooltip">そのファイルの拡張子。どの言語・形式で AI が多く使われたかを確認する。</span></span></span>
+            </th>
+            <th>
+              <span class="th-label">日時<span class="th-tooltip-wrap"><span class="th-info" aria-label="列の説明">?</span><span class="th-tooltip">AI 生成が記録された日時。いつ使われたかを確認する。</span></span></span>
+            </th>
+            <th>
+              <span class="th-label">source<span class="th-tooltip-wrap"><span class="th-info" aria-label="列の説明">?</span><span class="th-tooltip">Cursor が記録した生成元（どの機能で生成されたか）。何経路で AI が使われたかを確認する。</span></span></span>
+            </th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -160,6 +174,29 @@
         if (params.has('days')) daysInput.value = params.get('days');
         loadBtn.click();
       }
+
+      function setupColumnTooltips() {
+        var wraps = document.querySelectorAll('.th-tooltip-wrap');
+        wraps.forEach(function (wrap) {
+          var tooltip = wrap.querySelector('.th-tooltip');
+          if (!tooltip) return;
+          wrap.addEventListener('mouseenter', function () {
+            var rect = wrap.getBoundingClientRect();
+            var tw = 340;
+            var left = rect.left;
+            if (left < 8) left = 8;
+            if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = (rect.top - 6) + 'px';
+            tooltip.style.transform = 'translateY(-100%)';
+            tooltip.classList.add('is-visible');
+          });
+          wrap.addEventListener('mouseleave', function () {
+            tooltip.classList.remove('is-visible');
+          });
+        });
+      }
+      setupColumnTooltips();
     })();
   </script>
 </body>
