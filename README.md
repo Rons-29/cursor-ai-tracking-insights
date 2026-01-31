@@ -34,6 +34,22 @@ node dist/index.js summary --repo /path/to/repo --db-path /path/to/ai-code-track
 pnpm run start -- summary --repo /Users/you/project --days 7 --limit 20
 ```
 
+### ダッシュボード（Phase 2）
+
+簡易 Web ダッシュボードで、日付別・拡張子別の件数とファイル一覧をブラウザで表示します。ローカル or 社内のみ想定で、認証は初版では省略しています。
+
+```bash
+# 起動（デフォルトポート 3840）
+pnpm run dashboard
+# または
+node dist/index.js dashboard
+
+# ポート指定
+node dist/index.js dashboard --port 3000
+```
+
+起動後、ブラウザで `http://localhost:3840` を開き、「リポジトリパス」に絶対パス（例: `/Users/you/my-project`）を入力して「表示」をクリックしてください。URL に `?repo=/path/to/repo&days=30` を付けると初回から自動で読み込みます。
+
 ## 環境変数
 
 | 変数 | 説明 |
@@ -54,11 +70,11 @@ pnpm run start -- summary --repo /Users/you/project --days 7 --limit 20
 pnpm test
 ```
 
-## 次のステップ（Phase 2 以降・計画より）
+## 次のステップ（Phase 3 以降・計画より）
 
 | Phase | 内容 |
 |-------|------|
-| **Phase 2** | `list` / `stats` サブコマンド、拡張子別・日付別集計、CSV/JSON エクスポート、簡易 Web ダッシュボード（静的 HTML または Express） |
+| **Phase 2（済）** | 簡易 Web ダッシュボード（Express + Chart.js）、日付別・拡張子別集計、ファイル一覧 |
 | **Phase 3** | `daily-summary` サブコマンドで当日分を集計し、Slack/Teams の Incoming Webhook に送信。cron で日次実行する運用例を README に記載 |
 | **Phase 4** | 監査用エクスポート（固定フォーマット）、出力先（ローカル or S3/Sheets）、ファイルパスの匿名化オプション |
 

@@ -104,3 +104,74 @@ export function getSummary(
     db.close();
   }
 }
+
+/** 日付別件数（日単位、createdAt は Unix ms） */
+export interface DateCount {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+export function getStatsByDate(
+  dbPath: string,
+  repoPath: string,
+  days: number = 30
+): DateCount[] {
+  const db = openDbReadOnly(dbPath);
+  try {
+    const sinceMs =
+      days > 0 ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+    const repoNorm = repoPath.replace(/[/\\]$/, '') || repoPath;
+    const repoLike = repoNorm + '%';
+
+    const rows = db
+      .prepare(
+        `SELECT date(createdAt / 1000, 'unixepoch') AS date, COUNT(*) AS count
+         FROM ai_code_hashes
+         WHERE fileName LIKE ? AND createdAt >= ?
+         GROUP BY date
+         ORDER BY date ASC`
+      )
+      .all(repoLike, sinceMs) as { date: string; count: number }[];
+
+    return rows.map((r) => ({ date: r.date, count: r.count }));
+  } finally {
+    db.close();
+  }
+}
+
+/** 拡張子別件数 */
+export interface ExtensionCount {
+  extension: string;
+  count: number;
+}
+
+export function getStatsByExtension(
+  dbPath: string,
+  repoPath: string,
+  days: number = 30
+): ExtensionCount[] {
+  const db = openDbReadOnly(dbPath);
+  try {
+    const sinceMs =
+      days > 0 ? Date.now() - days * 24 * 60 * 60 * 1000 : 0;
+    const repoNorm = repoPath.replace(/[/\\]$/, '') || repoPath;
+    const repoLike = repoNorm + '%';
+
+    const rows = db
+      .prepare(
+        `SELECT COALESCE(fileExtension, '') AS extension, COUNT(*) AS count
+         FROM ai_code_hashes
+         WHERE fileName LIKE ? AND createdAt >= ?
+         GROUP BY extension
+         ORDER BY count DESC`
+      )
+      .all(repoLike, sinceMs) as { extension: string; count: number }[];
+
+    return rows.map((r) => ({
+      extension: r.extension || '(none)',
+      count: r.count,
+    }));
+  } finally {
+    db.close();
+  }
+}

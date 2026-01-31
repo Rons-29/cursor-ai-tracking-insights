@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cursor AI Tracking ダッシュボード</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --bg: #1a1a2e; --card: #16213e; --text: #e8e8e8; --accent: #0f3460; --muted: #8892a0; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .form { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.5rem; padding: 1rem; background: var(--card); border-radius: 8px; }
+    .form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem; color: var(--muted); }
+    .form input { padding: 0.5rem 0.75rem; border: 1px solid var(--accent); border-radius: 6px; background: var(--bg); color: var(--text); min-width: 280px; }
+    .form button { padding: 0.5rem 1rem; background: var(--accent); color: var(--text); border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .form button:hover { opacity: 0.9; }
+    .error { color: #e57373; margin: 0.5rem 0; }
+    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }
+    .chart-card { background: var(--card); border-radius: 8px; padding: 1rem; }
+    .chart-card h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--muted); }
+    .chart-container { position: relative; height: 240px; }
+    .table-wrap { overflow-x: auto; background: var(--card); border-radius: 8px; padding: 1rem; }
+    .table-wrap h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--accent); }
+    th { color: var(--muted); font-weight: 500; }
+    .total { margin: 0.5rem 0; font-size: 0.9rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Cursor AI Tracking ダッシュボード</h1>
+    <div class="form">
+      <label>
+        リポジトリパス（絶対パス）
+        <input type="text" id="repo" placeholder="/Users/me/my-project" />
+      </label>
+      <label>
+        直近（日）
+        <input type="number" id="days" value="30" min="1" max="365" />
+      </label>
+      <button type="button" id="load">表示</button>
+    </div>
+    <div id="error" class="error" aria-live="polite"></div>
+    <div id="total" class="total"></div>
+    <div class="charts" id="charts" hidden>
+      <div class="chart-card">
+        <h2>日付別件数</h2>
+        <div class="chart-container"><canvas id="chartDate"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h2>拡張子別件数</h2>
+        <div class="chart-container"><canvas id="chartExt"></canvas></div>
+      </div>
+    </div>
+    <div class="table-wrap" id="tableWrap" hidden>
+      <h2>ファイル一覧（最大200件）</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ファイル</th>
+            <th>拡張子</th>
+            <th>日時</th>
+            <th>source</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const repoInput = document.getElementById('repo');
+      const daysInput = document.getElementById('days');
+      const loadBtn = document.getElementById('load');
+      const errorEl = document.getElementById('error');
+      const totalEl = document.getElementById('total');
+      const chartsEl = document.getElementById('charts');
+      const tableWrap = document.getElementById('tableWrap');
+      const tableBody = document.getElementById('tableBody');
+      let chartDate = null;
+      let chartExt = null;
+
+      function showError(msg) {
+        errorEl.textContent = msg;
+        chartsEl.hidden = true;
+        tableWrap.hidden = true;
+      }
+
+      function clearError() {
+        errorEl.textContent = '';
+      }
+
+      function renderCharts(data) {
+        if (chartDate) chartDate.destroy();
+        if (chartExt) chartExt.destroy();
+
+        chartDate = new Chart(document.getElementById('chartDate'), {
+          type: 'bar',
+          data: {
+            labels: data.byDate.map(function (d) { return d.date; }),
+            datasets: [{ label: '件数', data: data.byDate.map(function (d) { return d.count; }), backgroundColor: 'rgba(15, 52, 96, 0.8)' }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+
+        chartExt = new Chart(document.getElementById('chartExt'), {
+          type: 'bar',
+          data: {
+            labels: data.byExtension.map(function (d) { return d.extension || '(none)'; }),
+            datasets: [{ label: '件数', data: data.byExtension.map(function (d) { return d.count; }), backgroundColor: 'rgba(15, 52, 96, 0.8)' }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+        });
+      }
+
+      function renderTable(items) {
+        tableBody.innerHTML = items.map(function (row) {
+          return '<tr><td>' + escapeHtml(row.fileName) + '</td><td>' + escapeHtml(row.fileExtension) + '</td><td>' + escapeHtml(row.createdAt) + '</td><td>' + escapeHtml(row.source || '') + '</td></tr>';
+        }).join('');
+      }
+
+      function escapeHtml(s) {
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      loadBtn.addEventListener('click', function () {
+        var repo = repoInput.value.trim();
+        var days = parseInt(daysInput.value, 10) || 30;
+        if (!repo) {
+          showError('リポジトリパスを入力してください。');
+          return;
+        }
+        clearError();
+        fetch('/api/stats?repo=' + encodeURIComponent(repo) + '&days=' + days)
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.error) {
+              showError(data.error);
+              return;
+            }
+            totalEl.textContent = '総件数: ' + data.totalCount + ' 件（直近 ' + days + ' 日）';
+            chartsEl.hidden = false;
+            tableWrap.hidden = false;
+            renderCharts(data);
+            renderTable(data.items || []);
+          })
+          .catch(function (e) {
+            showError('取得に失敗しました: ' + e.message);
+          });
+      });
+
+      var params = new URLSearchParams(window.location.search);
+      if (params.has('repo')) {
+        repoInput.value = params.get('repo');
+        if (params.has('days')) daysInput.value = params.get('days');
+        loadBtn.click();
+      }
+    })();
+  </script>
+</body>
+</html>
